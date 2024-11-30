@@ -1,42 +1,46 @@
 let logger = null
 let store = null
-
+let imgs = []
+const fs = require('fs')
+const path = require('path')
+let options = []
+fs.readdir(path.join(__dirname, "imgs"), (err, files) => {
+  files.forEach(file => {
+    let assetPath = "assets://mod/neko/imgs/" + file
+    imgs.push(assetPath)
+    options.push({value: assetPath, label: path.parse(file).name})
+  })
+})
 module.exports = {
   title: "Neko",
   summary: "gives you a little friend",
   author: "GiovanH",
-  modVersion: 0.2,
+  modVersion: 0.3,
 
   trees: {
     "./": "assets://mod/neko/"
   },
-
+  
   settings: {
-    radio: [{
-      model: "image",
-      label: "Image",
-      options: [{
-        value: "assets://mod/neko/vriskaimg.png",
-        label: "Vriska",
-      },{
-        value: "assets://mod/neko/dave.png",
-        label: "Babydave",
-      },{
-        value: "assets://mod/neko/nepeta.png",
-        label: "Nepeta",
-      }]
-    }],
     boolean: [{
+      model: "random-image",
+      label: "Randomize Image"
+    }, {
       model: "fixedpos",
       label: "Fixed position",
-      desc: "Attach to your screen, not the page.",
-    }]
+      desc: "Attach to your screen, not the page."
+    }],
+    radio: [{
+      model: "image",
+      label: "Image"
+    }],
   },
 
   computed(api) {
-    logger = api.logger
-    store = api.store
-    store.set("image", store.get("image", "assets://mod/neko/vriskaimg.png"))
+    logger = api.logger	
+	store = api.store
+    store.set("random-image", store.get("random-image", true))
+	store.set("image", store.get("image", imgs[0]))
   },
 
   vueHooks: [{
@@ -46,15 +50,17 @@ module.exports = {
     },
     updated() {
       this.$nextTick(() => {
+	var img = store.get("random-image", true) 
+	  ? imgs[Math.floor(Math.random() * imgs.length)] 
+	  : store.get("image", imgs[0])
         if (!this.nekoMod_hasNeko) {
-          if (this.$el.nodeType === 8) return
-
-          var x = document.createElement("IMG")
-          x.setAttribute("src", store.get("image"))
-
-          this.$el.appendChild(x)
-
-          x.style.width = "100px"
+	      var x = document.createElement("IMG")
+	      x.setAttribute("src", img)
+	      x.setAttribute("id", "floating-buddy")
+	      if (this.$el.nodeType === 8) return
+	      this.$el.appendChild(x)
+	    
+            x.style.width = "100px"
 
           x.style.position = store.get("fixedpos") ? "fixed" : "absolute"
           x.style.zIndex = "3"
@@ -78,7 +84,10 @@ module.exports = {
             x.style.left = left
           })
           this.nekoMod_hasNeko = true
+          return
         }
+	let buddy = document.getElementById("floating-buddy")
+	buddy.setAttribute("src", img);
       })
     },
     destroyed(){
@@ -87,3 +96,4 @@ module.exports = {
     }
   }]
 }
+module.exports.settings.radio[0].options = options
